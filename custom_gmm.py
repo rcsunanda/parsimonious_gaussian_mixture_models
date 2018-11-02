@@ -28,9 +28,9 @@ class GMM():
             covariances_init[j] = np.linalg.inv(precision_mat)
 
         # Following are model parameters that will be set once it is fitted
-        self.weights_ = weights_init    # The weights of each mixture component
-        self.means_ = means_init  # The mean of each mixture components
-        self.covariances_ = covariances_init    # The covariance of each mixture component
+        self.weights_ = np.array(weights_init)    # The weights of each mixture component
+        self.means_ = np.array(means_init)  # The mean of each mixture components
+        self.covariances_ = np.array(covariances_init)    # The covariance of each mixture component
 
 
     def fit(self, X):
@@ -46,6 +46,8 @@ class GMM():
         # We initialize the 'w' matrix here and pass to e_step
         # This avoids unnecessary memory allocs/deallocs (that may occur if w were to be created and as destroyed in _e_step() at each iteration)
         w = np.zeros([num_samples, self.n_components])  # MxK matrix
+
+        print("Initial values: weights={}, means={}, covs={}".format(self.weights_, self.means_, self.covariances_))
 
         for n_iter in range(1, self.max_iter + 1):
             print("\nEM iteration={}".format(n_iter))
@@ -131,9 +133,9 @@ class GMM():
         data_dimension = X.shape[1]
 
         for j, weight in enumerate(self.weights_):
+            # First set new weights and means
             w_sum = 0
             mean_numerator = np.zeros([data_dimension])
-            cov_numerator_total = np.zeros([data_dimension, data_dimension])
 
             for i, sample in enumerate(X):
                 w_sum = w_sum + w[i][j]
@@ -142,8 +144,16 @@ class GMM():
             self.weights_[j] = w_sum / num_samples
             self.means_[j] = mean_numerator / w_sum
 
+
+            # Then set new covariance matrix
+
+            cov_numerator_total = np.zeros([data_dimension, data_dimension])
+
             for i, sample in enumerate(X):
-                cov_numerator = w[i][j] * np.matmul(sample - self.means_[j], np.transpose(sample - self.means_[j]))
+                diff = sample - self.means_[j]
+                diff_reshaped = np.reshape(diff, [len(diff), 1])
+                diff_transpose = np.transpose(diff_reshaped)
+                cov_numerator = w[i][j] * np.matmul(diff_reshaped, diff_transpose)
                 cov_numerator_total = cov_numerator_total + cov_numerator
 
             # print("j={}, w_sum={}, cov_numerator={}".format(j, w_sum, cov_numerator_total))

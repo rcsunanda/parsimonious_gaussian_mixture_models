@@ -79,7 +79,8 @@ np.random.seed(0)
 
 # generate spherical data centered on (20, 20)
 mean1 = [10, 10]
-shifted_gaussian = np.random.randn(n_samples, 2) + np.array(mean1)
+cov1 = [[1, 0], [0, 1]]
+shifted_gaussian = np.random.multivariate_normal(mean1, cov1, n_samples)
 class1_target = np.zeros((n_samples, 1))
 
 # generate zero centered stretched Gaussian data
@@ -95,18 +96,20 @@ X_train = np.vstack([shifted_gaussian, stretched_gaussian])
 y_train = np.vstack([class1_target, class2_target])
 
 # Initial values for model parameters
-weights_init = [0.4, 0.6]
-# means_init = [[11, 11], [1, 1]]
-means_init = [[10, 10], [0, 0]]
-# cov_init = [[[1, 0.5], [0.5, 1]], [[1, 0.5], [0.5, 1]]]
-cov_init = [[[1, 0.5], [0.5, 1]], cov2]
-precisions_init = np.linalg.inv(cov_init)
+weights_init = [0.5, 0.5]
+# means_init = [mean1, mean2]
+means_init = [[15, 15], [-5, -5]]
+precisions_init = [np.linalg.inv(cov1), np.linalg.inv(cov2)]
 #print(precisions_init)
 
 # fit a Gaussian Mixture Model with two components
 gmm = GaussianMixture(n_components=2, covariance_type='full', max_iter=50,
                       weights_init=weights_init, means_init=means_init, precisions_init=precisions_init)
 gmm.fit(X_train)
+print("Trained GMM model parameters")
+print("weights={}".format(gmm.weights_))
+print("means={}".format(gmm.means_))
+print("covariances={}".format(gmm.covariances_))
 
 # print some model selection metrics
 bic = gmm.bic(X_train)    # Bayesian Information Criterion
