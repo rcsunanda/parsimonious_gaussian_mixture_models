@@ -7,7 +7,7 @@ import matplotlib as mpl
 import itertools
 
 # Set the following string to change which GMM code to use for this test (my code or the scikit-learn's GaussianMixture)
-which_gmm = 'skl_gmm'    # custom_gmm or skl_gmm
+which_gmm = 'custom_gmm'    # custom_gmm or skl_gmm
 
 if which_gmm == 'skl_gmm':
     from sklearn.mixture import GaussianMixture
@@ -39,7 +39,8 @@ def make_ellipses(gmm, ax, X_data):
     scatter_markers = itertools.cycle(['o', '+', 'v', '^'])
     for n, (mean, cov, color, marker) in enumerate(zip(gmm.means_, gmm.covariances_,
                                                        color_iter, scatter_markers)):
-        covariances = gmm.covariances_[n][:2, :2]
+        # covariances = gmm.covariances_[n][:2, :2]
+        covariances = gmm.covariances_[n]
         # covariances = gmm.covariances_
         v, w = np.linalg.eigh(covariances)
         u = w[0] / np.linalg.norm(w[0])
@@ -47,7 +48,8 @@ def make_ellipses(gmm, ax, X_data):
         angle = 180 * angle / np.pi  # convert to degrees
         # v = v * 3   # We do this to make ellipse bigger
         v = 2. * np.sqrt(2.) * np.sqrt(v)
-        ell = mpl.patches.Ellipse(xy=gmm.means_[n, :2], width=v[0], height=v[1],
+        # ell = mpl.patches.Ellipse(xy=gmm.means_[n, :2], width=v[0], height=v[1],
+        ell = mpl.patches.Ellipse(xy=gmm.means_[n], width=v[0], height=v[1],
                                   angle=180 + angle, color=color)
         ell.set_clip_box(ax.bbox)
         ell.set_alpha(0.5)
@@ -82,49 +84,60 @@ class1_target = np.zeros((n_samples, 1))
 
 # generate zero centered stretched Gaussian data
 mean2 = [0, 0]
-C = np.array([[0., -0.7], [3.5, .7]])
-stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) + mean2
+# C = np.array([[0., -0.7], [3.5, .7]])
+# stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) + mean2
+cov2 = [[1, -0.4], [-0.4, 1]]
+stretched_gaussian = np.random.multivariate_normal(mean2, cov2, n_samples)
 class2_target = np.ones((n_samples, 1))
 
 # concatenate the two datasets into the final training set
 X_train = np.vstack([shifted_gaussian, stretched_gaussian])
 y_train = np.vstack([class1_target, class2_target])
 
+# Initial values for model parameters
+weights_init = [0.4, 0.6]
+# means_init = [[11, 11], [1, 1]]
+means_init = [[10, 10], [0, 0]]
+# cov_init = [[[1, 0.5], [0.5, 1]], [[1, 0.5], [0.5, 1]]]
+cov_init = [[[1, 0.5], [0.5, 1]], cov2]
+precisions_init = np.linalg.inv(cov_init)
+#print(precisions_init)
 
 # fit a Gaussian Mixture Model with two components
-gmm = GaussianMixture(n_components=2, covariance_type='full')
+gmm = GaussianMixture(n_components=2, covariance_type='full', max_iter=50,
+                      weights_init=weights_init, means_init=means_init, precisions_init=precisions_init)
 gmm.fit(X_train)
 
 # print some model selection metrics
 bic = gmm.bic(X_train)    # Bayesian Information Criterion
 aic = gmm.aic(X_train)    # Akaike Information Criterion
 print("Model selection metrics (the lower the better): BIC={}, AIC={}".format(bic, aic))
-
-# predict on training data and measure training Rand index and adjusted Rand index
-pred_train = gmm.predict(X_train)
-
-rand_index = compute_rand_index(y_train, pred_train)
-adjusted_rand_index = metrics.adjusted_rand_score(y_train.flatten(), pred_train.flatten())
-print("Training data: num_samples={}, Rand index={}, Adjusted Rand index={}".
-      format(len(X_train), rand_index, adjusted_rand_index))
-
-# Generate some test data
-test_shifted_gaussian = np.random.randn(n_samples, 2) + np.array(mean1)
-test_class1_target = np.zeros((n_samples, 1))
-test_stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) + mean2
-test_class2_target = np.ones((n_samples, 1))
-# concatenate the two datasets into the final test set
-X_test = np.vstack([test_shifted_gaussian, test_stretched_gaussian])
-y_test = np.vstack([test_class1_target, test_class2_target])
-
-
-# predict on test data and measure training Rand index and adjusted Rand index
-pred_test = gmm.predict(X_test)
-
-test_rand_index = compute_rand_index(y_test, pred_test)
-test_adjusted_rand_index = metrics.adjusted_rand_score(y_test.flatten(), pred_test.flatten())
-print("Test data: num_samples={}, Rand index={}, Adjusted Rand index={}".
-      format(len(X_test), test_rand_index, test_adjusted_rand_index))
+#
+# # predict on training data and measure training Rand index and adjusted Rand index
+# pred_train = gmm.predict(X_train)
+#
+# rand_index = compute_rand_index(y_train, pred_train)
+# adjusted_rand_index = metrics.adjusted_rand_score(y_train.flatten(), pred_train.flatten())
+# print("Training data: num_samples={}, Rand index={}, Adjusted Rand index={}".
+#       format(len(X_train), rand_index, adjusted_rand_index))
+#
+# # Generate some test data
+# test_shifted_gaussian = np.random.randn(n_samples, 2) + np.array(mean1)
+# test_class1_target = np.zeros((n_samples, 1))
+# test_stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) + mean2
+# test_class2_target = np.ones((n_samples, 1))
+# # concatenate the two datasets into the final test set
+# X_test = np.vstack([test_shifted_gaussian, test_stretched_gaussian])
+# y_test = np.vstack([test_class1_target, test_class2_target])
+#
+#
+# # predict on test data and measure training Rand index and adjusted Rand index
+# pred_test = gmm.predict(X_test)
+#
+# test_rand_index = compute_rand_index(y_test, pred_test)
+# test_adjusted_rand_index = metrics.adjusted_rand_score(y_test.flatten(), pred_test.flatten())
+# print("Test data: num_samples={}, Rand index={}, Adjusted Rand index={}".
+#       format(len(X_test), test_rand_index, test_adjusted_rand_index))
 
 
 # display predicted scores by the model as a contour plot
