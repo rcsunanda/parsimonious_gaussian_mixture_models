@@ -1,11 +1,19 @@
 import numpy as np
-from sklearn import mixture
 from sklearn import metrics
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import matplotlib as mpl
 import itertools
+
+# Set the following string to change which GMM code to use for this test (my code or the scikit-learn's GaussianMixture)
+which_gmm = 'skl_gmm'    # custom_gmm or skl_gmm
+
+if which_gmm == 'skl_gmm':
+    from sklearn.mixture import GaussianMixture
+elif which_gmm == 'custom_gmm':
+    from custom_gmm import GMM as GaussianMixture
+
 
 def compute_rand_index(cluster1, cluster2):
     n = len(cluster1)
@@ -82,8 +90,9 @@ class2_target = np.ones((n_samples, 1))
 X_train = np.vstack([shifted_gaussian, stretched_gaussian])
 y_train = np.vstack([class1_target, class2_target])
 
+
 # fit a Gaussian Mixture Model with two components
-gmm = mixture.GaussianMixture(n_components=2, covariance_type='full')
+gmm = GaussianMixture(n_components=2, covariance_type='full')
 gmm.fit(X_train)
 
 # print some model selection metrics
@@ -96,7 +105,8 @@ pred_train = gmm.predict(X_train)
 
 rand_index = compute_rand_index(y_train, pred_train)
 adjusted_rand_index = metrics.adjusted_rand_score(y_train.flatten(), pred_train.flatten())
-print("Training data: Rand index={}, Adjusted Rand index={}".format(rand_index, adjusted_rand_index))
+print("Training data: num_samples={}, Rand index={}, Adjusted Rand index={}".
+      format(len(X_train), rand_index, adjusted_rand_index))
 
 # Generate some test data
 test_shifted_gaussian = np.random.randn(n_samples, 2) + np.array(mean1)
@@ -113,7 +123,8 @@ pred_test = gmm.predict(X_test)
 
 test_rand_index = compute_rand_index(y_test, pred_test)
 test_adjusted_rand_index = metrics.adjusted_rand_score(y_test.flatten(), pred_test.flatten())
-print("Test data: Rand index={}, Adjusted Rand index={}".format(test_rand_index, test_adjusted_rand_index))
+print("Test data: num_samples={}, Rand index={}, Adjusted Rand index={}".
+      format(len(X_test), test_rand_index, test_adjusted_rand_index))
 
 
 # display predicted scores by the model as a contour plot
