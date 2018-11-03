@@ -55,14 +55,19 @@ class GMM():
             self._m_step(X, w)
             print("weights={}, means={}, covs={}".format(self.weights_, self.means_, self.covariances_))
 
+
     def predict_proba(self, X):
         """Predict posterior probability of each component given the data"""
-        pass
+        num_samples = X.shape[0]
+        probabilities = np.zeros([num_samples, self.n_components])  # MxK matrix
+        self.sample_component_prob(X, probabilities)
+        return probabilities
 
 
     def predict(self, X):
         """Predict the labels for the data samples in X using trained model"""
-        pass
+        pred_probabilities = self.predict_proba(X)
+        return pred_probabilities.argmax(axis=1)    #argmax(axis=1) gives the index of the column with max value, for each row
 
 
     def bic(self, X):
@@ -93,23 +98,7 @@ class GMM():
                 where  p(x(i,j) | z(i)) ~ Gaussian(means(j), covariances(j))
                 = (this is a MxK matrix where M = no. of samples, K = no. of Gaussian components)
         """
-
-        prob_x_given_z = []
-        for j, (mean, cov) in enumerate(zip(self.means_, self.covariances_)):
-            # print("j={}, weights={}, mean={}, cov={}".format(j, self.weights, mean, cov))
-            prob_x_given_z.append(multivariate_normal(mean=mean, cov=cov, allow_singular=True))
-
-        # prob_x_given_z = [multivariate_normal(mean=mean, cov=cov)
-        #                   for mean, cov in zip(self.means, self.covariances)]
-
-        for i, sample in enumerate(X):
-            denominator_sum = 0
-            for j, component_dist in enumerate(prob_x_given_z):
-                denominator_sum = denominator_sum + component_dist.pdf(sample) * self.weights_[j]
-
-            for j, component_dist in enumerate(prob_x_given_z):
-                numerator = component_dist.pdf(sample) * self.weights_[j]
-                w[i][j] = numerator / denominator_sum
+        self.sample_component_prob(X,w) # The actual calculation is delegated to this method (to reuse)
 
 
     def _m_step(self, X, w):
@@ -160,3 +149,21 @@ class GMM():
             self.covariances_[j] = cov_numerator_total / w_sum
 
         # print(self.means[j].shape)
+
+
+    def sample_component_prob(self, X, probs_matrix):
+        """
+        Compute the probability that each sample in X came from each component (under the current model params)
+        Calculated values are set in probs_matrix (MxK matrix where M = no. of samples in X, K = no. of Gaussian components)
+        """
+        prob_x_given_z = [multivariate_normal(mean=mean, cov=cov)
+                          for mean, cov in zip(self.means_, self.covariances_)]
+
+        for i, sample in enumerate(X):
+            denominator_sum = 0
+            for j, component_dist in enumerate(prob_x_given_z):
+                denominator_sum = denominator_sum + component_dist.pdf(sample) * self.weights_[j]
+
+            for j, component_dist in enumerate(prob_x_given_z):
+                numerator = component_dist.pdf(sample) * self.weights_[j]
+                probs_matrix[i][j] = numerator / denominator_sum

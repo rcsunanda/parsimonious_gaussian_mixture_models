@@ -115,32 +115,33 @@ print("covariances={}".format(gmm.covariances_))
 bic = gmm.bic(X_train)    # Bayesian Information Criterion
 aic = gmm.aic(X_train)    # Akaike Information Criterion
 print("Model selection metrics (the lower the better): BIC={}, AIC={}".format(bic, aic))
-#
-# # predict on training data and measure training Rand index and adjusted Rand index
-# pred_train = gmm.predict(X_train)
-#
-# rand_index = compute_rand_index(y_train, pred_train)
-# adjusted_rand_index = metrics.adjusted_rand_score(y_train.flatten(), pred_train.flatten())
-# print("Training data: num_samples={}, Rand index={}, Adjusted Rand index={}".
-#       format(len(X_train), rand_index, adjusted_rand_index))
-#
-# # Generate some test data
-# test_shifted_gaussian = np.random.randn(n_samples, 2) + np.array(mean1)
-# test_class1_target = np.zeros((n_samples, 1))
-# test_stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) + mean2
-# test_class2_target = np.ones((n_samples, 1))
-# # concatenate the two datasets into the final test set
-# X_test = np.vstack([test_shifted_gaussian, test_stretched_gaussian])
-# y_test = np.vstack([test_class1_target, test_class2_target])
-#
-#
-# # predict on test data and measure training Rand index and adjusted Rand index
-# pred_test = gmm.predict(X_test)
-#
-# test_rand_index = compute_rand_index(y_test, pred_test)
-# test_adjusted_rand_index = metrics.adjusted_rand_score(y_test.flatten(), pred_test.flatten())
-# print("Test data: num_samples={}, Rand index={}, Adjusted Rand index={}".
-#       format(len(X_test), test_rand_index, test_adjusted_rand_index))
+
+# predict on training data and measure training Rand index and adjusted Rand index
+pred_train = gmm.predict(X_train)
+# pred_probabilities = gmm.predict_proba(X_train)
+
+rand_index = compute_rand_index(y_train, pred_train)
+adjusted_rand_index = metrics.adjusted_rand_score(y_train.flatten(), pred_train.flatten())
+print("Training data: num_samples={}, Rand index={}, Adjusted Rand index={}".
+      format(len(X_train), rand_index, adjusted_rand_index))
+
+# Generate some test data
+test_shifted_gaussian = np.random.multivariate_normal(mean1, cov1, n_samples)
+test_class1_target = np.zeros((n_samples, 1))
+test_stretched_gaussian = np.random.multivariate_normal(mean2, cov2, n_samples)
+test_class2_target = np.ones((n_samples, 1))
+# concatenate the two datasets into the final test set
+X_test = np.vstack([test_shifted_gaussian, test_stretched_gaussian])
+y_test = np.vstack([test_class1_target, test_class2_target])
+
+
+# predict on test data and measure training Rand index and adjusted Rand index
+pred_test = gmm.predict(X_test)
+
+test_rand_index = compute_rand_index(y_test, pred_test)
+test_adjusted_rand_index = metrics.adjusted_rand_score(y_test.flatten(), pred_test.flatten())
+print("Test data: num_samples={}, Rand index={}, Adjusted Rand index={}".
+      format(len(X_test), test_rand_index, test_adjusted_rand_index))
 
 
 # display predicted scores by the model as a contour plot
