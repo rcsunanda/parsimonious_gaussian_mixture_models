@@ -9,6 +9,10 @@ import itertools
 # Set the following string to change which GMM code to use for this test (my code or the scikit-learn's GaussianMixture)
 which_gmm = 'custom_gmm'    # custom_gmm or skl_gmm
 
+# Other params
+max_iter = 10
+
+
 if which_gmm == 'skl_gmm':
     from sklearn.mixture import GaussianMixture
 elif which_gmm == 'custom_gmm':
@@ -77,8 +81,8 @@ n_samples = 300  # was 300 originally
 # generate random sample, two components
 np.random.seed(0)
 
-# generate spherical data centered on (20, 20)
-mean1 = [10, 10]
+# generate spherical data centered on (10, 10)
+mean1 = [5, 5]
 cov1 = [[1, 0], [0, 1]]
 shifted_gaussian = np.random.multivariate_normal(mean1, cov1, n_samples)
 class1_target = np.zeros((n_samples, 1))
@@ -103,7 +107,7 @@ precisions_init = [np.linalg.inv(cov1), np.linalg.inv(cov2)]
 #print(precisions_init)
 
 # fit a Gaussian Mixture Model with two components
-gmm = GaussianMixture(n_components=2, covariance_type='full', max_iter=50,
+gmm = GaussianMixture(n_components=2, covariance_type='full', max_iter=max_iter,
                       weights_init=weights_init, means_init=means_init, precisions_init=precisions_init)
 gmm.fit(X_train)
 print("Trained GMM model parameters")

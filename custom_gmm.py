@@ -9,7 +9,7 @@ class GMM():
     """The following methods are the interface of the class"""
 
     def __init__(self, n_components=1, covariance_type='full', max_iter=100,
-                 weights_init=None, means_init=None, precisions_init=None):
+                 weights_init=None, means_init=None, precisions_init=None, verbose=0):
 
         # Some assertions to enforce limitations of the model (may be able to remove some as implementation progresses)
         assert covariance_type == 'full';
@@ -21,11 +21,10 @@ class GMM():
         self.n_components = n_components
         self.covariance_type = covariance_type
         self.max_iter = max_iter
+        self.verbose = verbose
 
         # Note: precision is the inverse matrix of the covariance matrix
-        covariances_init = precisions_init.copy()
-        for j, precision_mat in enumerate(precisions_init):
-            covariances_init[j] = np.linalg.inv(precision_mat)
+        covariances_init = [np.linalg.inv(precision_mat) for precision_mat in precisions_init]
 
         # Following are model parameters that will be set once it is fitted
         self.weights_ = np.array(weights_init)    # The weights of each mixture component
@@ -50,10 +49,11 @@ class GMM():
         print("Initial values: weights={}, means={}, covs={}".format(self.weights_, self.means_, self.covariances_))
 
         for n_iter in range(1, self.max_iter + 1):
-            print("\nEM iteration={}".format(n_iter))
             self._e_step(X, w)
             self._m_step(X, w)
-            print("weights={}, means={}, covs={}".format(self.weights_, self.means_, self.covariances_))
+
+            if (self.verbose > 0):
+                print("\nEM iteration={} \nweights={} \nmeans={} \ncovs={} \n".format(n_iter, self.weights_, self.means_, self.covariances_))
 
 
     def predict_proba(self, X):
@@ -98,7 +98,7 @@ class GMM():
                 where  p(x(i,j) | z(i)) ~ Gaussian(means(j), covariances(j))
                 = (this is a MxK matrix where M = no. of samples, K = no. of Gaussian components)
         """
-        self.sample_component_prob(X,w) # The actual calculation is delegated to this method (to reuse)
+        self.sample_component_prob(X, w)    # The actual calculation is delegated to this method (to reuse)
 
 
     def _m_step(self, X, w):
