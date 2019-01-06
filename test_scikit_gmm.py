@@ -92,6 +92,7 @@ mean2 = [0, 0]
 # C = np.array([[0., -0.7], [3.5, .7]])
 # stretched_gaussian = np.dot(np.random.randn(n_samples, 2), C) + mean2
 cov2 = [[1, -0.4], [-0.4, 1]]
+# cov2 = cov1
 stretched_gaussian = np.random.multivariate_normal(mean2, cov2, n_samples)
 class2_target = np.ones((n_samples, 1))
 
@@ -105,6 +106,7 @@ weights_init = [0.5, 0.5]
 means_init = [[15, 15], [-5, -5]]
 precisions_init = [np.linalg.inv(cov1), np.linalg.inv(cov2)]
 #print(precisions_init)
+
 
 # fit a Gaussian Mixture Model with two components
 gmm = GaussianMixture(n_components=2, covariance_type='full', max_iter=max_iter,
@@ -153,6 +155,16 @@ print("Test data: num_samples={}, Rand index={}, Adjusted Rand index={}".
 # plt.title('Negative log-likelihood predicted by a GMM')
 # plt.axis('tight')
 
+"""
+print('------------------ Doing em_gmm_orig ------------------')
+import custom_gmm
+covs_init = [cov1, cov2]
+ll_new, pis, mus, sigmas = custom_gmm.em_gmm_orig(X_train, weights_init, means_init, covs_init, tol=0.01, max_iter=max_iter)
+
+gmm.means_ = mus
+gmm.covariances_ = sigmas
+gmm.weights_ = pis
+"""
 
 # Plot an ellipse for each Gaussian component
 fig = plt.figure()

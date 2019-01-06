@@ -18,6 +18,10 @@ class GMM():
         assert means_init != None;
         assert precisions_init is not None
 
+        assert(len(weights_init) == n_components)
+        assert(len(means_init) == n_components)
+        assert(len(precisions_init) == n_components)
+
         self.n_components = n_components
         self.covariance_type = covariance_type
         self.max_iter = max_iter
@@ -121,34 +125,56 @@ class GMM():
         num_samples = X.shape[0]
         data_dimension = X.shape[1]
 
+        # First set new weights
+
         for j, weight in enumerate(self.weights_):
-            # First set new weights and means
+
+            w_sum = 0
+
+            for i, sample in enumerate(X):
+                w_sum = w_sum + w[i][j]
+
+            self.weights_[j] = w_sum / num_samples
+
+
+        # Then set means means
+
+        means = np.zeros((self.n_components, data_dimension))   # Compute means in new variable and assign to self.means_ (to fix bug: unclear why this is the case)
+
+        for j, weight in enumerate(self.weights_):
             w_sum = 0
             mean_numerator = np.zeros([data_dimension])
 
             for i, sample in enumerate(X):
                 w_sum = w_sum + w[i][j]
-                mean_numerator = mean_numerator + w[i][j] * sample
+                mean_numerator += w[i][j] * sample
 
-            self.weights_[j] = w_sum / num_samples
-            self.means_[j] = mean_numerator / w_sum
+            means[j] = mean_numerator / w_sum
+
+        self.means_ = means
 
 
-            # Then set new covariance matrix
+        # Then set new covariance matrix
+
+        for j, weight in enumerate(self.weights_):
 
             cov_numerator_total = np.zeros([data_dimension, data_dimension])
 
             for i, sample in enumerate(X):
                 diff = sample - self.means_[j]
                 diff_reshaped = np.reshape(diff, [len(diff), 1])
-                diff_transpose = np.transpose(diff_reshaped)
-                cov_numerator = w[i][j] * np.matmul(diff_reshaped, diff_transpose)
+                cov_numerator = w[i][j] * np.dot(diff_reshaped, diff_reshaped.T)
                 cov_numerator_total = cov_numerator_total + cov_numerator
 
             # print("j={}, w_sum={}, cov_numerator={}".format(j, w_sum, cov_numerator_total))
-            self.covariances_[j] = cov_numerator_total / w_sum
+            self.covariances_[j] = cov_numerator_total / w[:, j].sum()
+
 
         # print(self.means[j].shape)
+
+        # Correctness check
+        weights_sum = self.weights_.sum()
+        assert (abs(weights_sum - 1) < 1e-8)
 
 
     def sample_component_prob(self, X, probs_matrix):
@@ -160,10 +186,68 @@ class GMM():
                           for mean, cov in zip(self.means_, self.covariances_)]
 
         for i, sample in enumerate(X):
-            denominator_sum = 0
-            for j, component_dist in enumerate(prob_x_given_z):
-                denominator_sum = denominator_sum + component_dist.pdf(sample) * self.weights_[j]
-
             for j, component_dist in enumerate(prob_x_given_z):
                 numerator = component_dist.pdf(sample) * self.weights_[j]
-                probs_matrix[i][j] = numerator / denominator_sum
+                probs_matrix[i][j] = numerator
+
+        probs_matrix /= probs_matrix.sum(axis=1, keepdims=True)
+
+        # Correctness check
+        expected = np.ones([len(X), 1])  # MxK matrix
+        prob_z_given_x = probs_matrix.sum(axis=1)
+        is_equal = np.allclose(prob_z_given_x, expected)
+        assert(is_equal)
+
+
+
+def em_gmm_orig(xs, pis, mus, sigmas, tol=0.01, max_iter=100):
+
+    n, p = xs.shape
+    k = len(pis)
+
+    ll_old = 0
+    for i in range(max_iter):
+        exp_A = []
+        exp_B = []
+        ll_new = 0
+
+        # E-step
+        ws = np.zeros((k, n))
+        for j in range(len(mus)):
+            for i in range(n):
+                ws[j, i] = pis[j] * multivariate_normal(mus[j], sigmas[j]).pdf(xs[i])
+        ws /= ws.sum(0)
+
+        # M-step
+        pis = np.zeros(k)
+        for j in range(len(mus)):
+            for i in range(n):
+                pis[j] += ws[j, i]
+        pis /= n
+
+        mus = np.zeros((k, p))
+        for j in range(k):
+            for i in range(n):
+                mus[j] += ws[j, i] * xs[i]
+            mus[j] /= ws[j, :].sum()
+
+        sigmas = np.zeros((k, p, p))
+        for j in range(k):
+            for i in range(n):
+                ys = np.reshape(xs[i]- mus[j], (2,1))
+                sigmas[j] += ws[j, i] * np.dot(ys, ys.T)
+            sigmas[j] /= ws[j,:].sum()
+
+        # update complete log likelihoood
+        ll_new = 0.0
+        for i in range(n):
+            s = 0
+            for j in range(k):
+                s += pis[j] * multivariate_normal(mus[j], sigmas[j]).pdf(xs[i])
+            ll_new += np.log(s)
+
+        if np.abs(ll_new - ll_old) < tol:
+            break
+        ll_old = ll_new
+
+    return ll_new, pis, mus, sigmas
