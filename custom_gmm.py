@@ -137,7 +137,7 @@ class GMM():
             self.weights_[j] = w_sum / num_samples
 
 
-        # Then set means means
+        # Then set new means
 
         means = np.zeros((self.n_components, data_dimension))   # Compute means in new variable and assign to self.means_ (to fix bug: unclear why this is the case)
 
