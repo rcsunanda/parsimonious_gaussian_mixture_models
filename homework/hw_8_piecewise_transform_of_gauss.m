@@ -40,7 +40,7 @@ analytic_piecewise_transform(idx) = [left_amplitude, right_amplitude];    % repl
 figure;
 plot(y_vals, analytic_piecewise_transform, '--', 'MarkerSize', 10);
 axis([-5 5 0 2]);
-title('PDF of Gaussian distribution transformed by y=x^2')
+title('PDF of Gaussian distribution transformed by piecewise function')
 
 % -------------------
 % Simulate the transform
